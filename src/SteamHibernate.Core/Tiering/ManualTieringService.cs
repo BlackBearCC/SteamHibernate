@@ -16,12 +16,14 @@ public sealed class ManualTieringService
     private readonly string _archiveRoot;
     private readonly int _level;
     private readonly Func<string, SteamLibrary>? _resolveLibrary;
+    private readonly IReadOnlyDictionary<string, IArchiveEngine>? _restoreEngines;
 
     public ManualTieringService(IArchiveEngine engine, MetadataStore store,
-        string archiveRoot, int level, Func<string, SteamLibrary>? resolveLibrary = null)
+        string archiveRoot, int level, Func<string, SteamLibrary>? resolveLibrary = null,
+        IReadOnlyDictionary<string, IArchiveEngine>? restoreEngines = null)
     {
         _engine = engine; _store = store; _archiveRoot = archiveRoot;
-        _level = level; _resolveLibrary = resolveLibrary;
+        _level = level; _resolveLibrary = resolveLibrary; _restoreEngines = restoreEngines;
     }
 
     public TieringResult Compress(InstalledGame game, Action<ArchiveProgress> progress)
@@ -90,10 +92,17 @@ public sealed class ManualTieringService
 
         var finalGameDir = Path.Combine(lib.CommonPath, header.InstallDirName);
         var tmpDir = finalGameDir + RestoringSuffix;
+
+        // Choose the engine that matches the package's stored extension, if a restore-engine
+        // registry is configured; otherwise fall back to the default engine.
+        var restoreEngine = _restoreEngines is not null &&
+            _restoreEngines.TryGetValue(header.EngineExtension, out var mapped)
+            ? mapped : _engine;
+
         try
         {
             if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, true);
-            GamePackage.Unpack(_engine, rec.PackageDir, tmpDir,
+            GamePackage.Unpack(restoreEngine, rec.PackageDir, tmpDir,
                 lib.AppManifestPath(appId), progress);
 
             if (Directory.Exists(finalGameDir)) Directory.Delete(finalGameDir, true);
