@@ -6,6 +6,12 @@ A **Steam-only** desktop tool that **cold-archives games you're not playing** wi
 
 ---
 
+## Install
+
+Download the latest **`SteamHibernate-Setup-x.y.z.exe`** from [Releases](https://github.com/BlackBearCC/SteamHibernate/releases) and run it. The installer is self-contained — it bundles the .NET runtime, `7za.exe`, and `precomp.exe`, so there are no prerequisites. It installs to Program Files with a Start Menu (and optional desktop) shortcut and an uninstaller.
+
+By default, archives are stored **inside each game's own Steam library** (`<library>\SteamHibernate\<appid>`, same drive as the game). Since a verified Compress deletes the original folder, keeping the archive on the same drive nets a space saving rather than costing extra. Override with `ArchiveRoot` in config if you'd rather archive to another drive/NAS.
+
 ## What it does
 
 Steam installs games as plain folders under `steamapps/common/<Game>` plus an `appmanifest_<appid>.acf`. SteamHibernate:
@@ -79,7 +85,7 @@ SteamHibernate.App.exe restore  <appid>     # bring it back
 
 | Key | Meaning | Default |
 |---|---|---|
-| `ArchiveRoot` | Where archives are stored | config dir `\archives` |
+| `ArchiveRoot` | Where archives are stored (empty = inside each game's Steam library) | empty (per-library) |
 | `CompressionLevel` | LZMA2 level 1–9 | `9` |
 | `SevenZipPath` | Path to 7-Zip exe | auto-detect |
 | `EnablePrecomp` | Use the precomp engine | `false` |
