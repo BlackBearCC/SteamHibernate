@@ -1,4 +1,5 @@
 // tests/.../Package/GamePackageTests.cs
+using SteamHibernate.Core.Engine;
 using SteamHibernate.Core.Package;
 using Xunit;
 
@@ -30,5 +31,34 @@ public class GamePackageTests : IDisposable
         var m = DirectoryManifest.Capture(empty);
         Assert.Empty(m.Files);
         Assert.Equal(0, m.TotalSize);
+    }
+
+    [SkippableFact]
+    public void Pack_then_unpack_restores_game_and_acf()
+    {
+        var exe = SevenZipEngine.FindBinary();
+        Skip.If(exe is null, "7-Zip binary not found");
+        var engine = new SevenZipEngine(exe!);
+
+        var game = Path.Combine(_tmp, "common", "MyGame");
+        Directory.CreateDirectory(game);
+        File.WriteAllText(Path.Combine(game, "game.dat"), "payload");
+        var acf = Path.Combine(_tmp, "appmanifest_999.acf");
+        File.WriteAllText(acf, "\"AppState\" { \"appid\" \"999\" }");
+
+        var pkgDir = Path.Combine(_tmp, "pkg");
+        GamePackage.Pack(engine, appId: "999", gameDir: game, acfPath: acf,
+            packageDir: pkgDir, level: 5, _ => { });
+
+        var header = GamePackage.ReadHeader(pkgDir);
+        Assert.Equal("999", header.AppId);
+        Assert.True(header.CompressedSize > 0);
+
+        var restoreGame = Path.Combine(_tmp, "restored", "MyGame");
+        var restoreAcf = Path.Combine(_tmp, "restored", "appmanifest_999.acf");
+        GamePackage.Unpack(engine, pkgDir, restoreGame, restoreAcf, _ => { });
+
+        Assert.Equal("payload", File.ReadAllText(Path.Combine(restoreGame, "game.dat")));
+        Assert.True(File.Exists(restoreAcf));
     }
 }
