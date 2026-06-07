@@ -11,23 +11,30 @@ public sealed class ConfigSteamLocator : ISteamLocator
 
     public IReadOnlyList<SteamLibrary> GetLibraries()
     {
-        var result = new List<SteamLibrary> { new(SteamRoot) };
+        var result = new List<SteamLibrary>();
+        var seen = new HashSet<string>();
+        void TryAdd(string root)
+        {
+            if (!string.IsNullOrWhiteSpace(root) && seen.Add(NormalizeKey(root)))
+                result.Add(new SteamLibrary(root));
+        }
+
+        TryAdd(SteamRoot);
         var file = Path.Combine(SteamRoot, "steamapps", "libraryfolders.vdf");
         if (!File.Exists(file)) return result;
 
         var root = VdfParser.Parse(File.ReadAllText(file));
-        var folders = root["libraryfolders"];
-        foreach (var (_, node) in folders.Children)
-        {
-            var path = node["path"].Value;
-            if (!string.IsNullOrWhiteSpace(path) &&
-                !result.Any(l => string.Equals(l.RootPath, path, StringComparison.OrdinalIgnoreCase)))
-            {
-                result.Add(new SteamLibrary(path));
-            }
-        }
+        foreach (var (_, node) in root["libraryfolders"].Children)
+            TryAdd(node["path"].Value ?? string.Empty);
         return result;
     }
+
+    // Steam stores library paths inconsistently: the registry SteamPath uses forward
+    // slashes / lowercase (e.g. "d:/program files/steam") while libraryfolders.vdf uses
+    // escaped backslashes / title case ("D:\\Program Files\\Steam"). Normalize separators,
+    // trailing slash and case so the same physical folder is not scanned twice.
+    private static string NormalizeKey(string path) =>
+        path.Replace('\\', '/').TrimEnd('/').ToLowerInvariant();
 
     public IReadOnlyList<string> GetUserConfigPaths()
     {

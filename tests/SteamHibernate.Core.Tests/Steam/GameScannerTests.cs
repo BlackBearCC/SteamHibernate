@@ -78,5 +78,25 @@ public class GameScannerTests : IDisposable
         }
     }
 
+    [Fact]
+    public void Library_listed_with_different_separators_and_case_is_not_scanned_twice()
+    {
+        // libraryfolders.vdf references the SAME root as the registry SteamPath but with
+        // backslashes + uppercased drive/case (as real Steam does). Must dedupe → one game.
+        // Real Steam escapes separators in the vdf ("D:\\Program Files\\Steam"); the parser
+        // unescapes \\ -> \. Replace each / with a doubled backslash and upper-case it.
+        var altPath = _root.Replace("/", "\\\\").ToUpperInvariant();
+        File.WriteAllText(Path.Combine(_root, "steamapps", "libraryfolders.vdf"), $$"""
+        "libraryfolders"
+        {
+            "0" { "path" "{{altPath}}" }
+        }
+        """);
+
+        var locator = new ConfigSteamLocator(_root);
+        Assert.Single(locator.GetLibraries());           // deduped to one library
+        Assert.Single(new GameScanner(locator).Scan());  // game not doubled
+    }
+
     public void Dispose() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
 }
