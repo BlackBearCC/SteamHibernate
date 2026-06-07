@@ -3,7 +3,7 @@
 ; Produces: installer\Output\SteamHibernate-Setup-<version>.exe
 
 #define MyAppName "SteamHibernate"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.1.1"
 #define MyAppPublisher "BlackBearCC"
 #define MyAppURL "https://github.com/BlackBearCC/SteamHibernate"
 #define MyAppExeName "SteamHibernate.App.exe"

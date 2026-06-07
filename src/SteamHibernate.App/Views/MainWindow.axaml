@@ -10,7 +10,23 @@
       <DataGrid.Columns>
         <DataGridTextColumn Header="Game" Binding="{Binding Name}" Width="*"/>
         <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="90"/>
-        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="110"/>
+        <DataGridTemplateColumn Header="Status" Width="190">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate x:DataType="vm:GameRowViewModel">
+              <Panel VerticalAlignment="Center">
+                <TextBlock Text="{Binding Status}" VerticalAlignment="Center" IsVisible="{Binding !Busy}"/>
+                <StackPanel Orientation="Vertical" Spacing="2" IsVisible="{Binding Busy}" VerticalAlignment="Center">
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding Status}" FontSize="11"/>
+                    <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right" FontSize="11"
+                               Text="{Binding Progress, StringFormat={}{0:P0}}"/>
+                  </DockPanel>
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" Height="6"/>
+                </StackPanel>
+              </Panel>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
         <DataGridTemplateColumn Header="Actions" Width="200">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate x:DataType="vm:GameRowViewModel">
