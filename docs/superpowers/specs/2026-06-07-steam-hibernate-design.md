@@ -2,6 +2,8 @@
 
 > 代号 **SteamHibernate**(暂定,可改)。一个 **Steam 专用**的桌面 GUI 工具:把长期不玩的游戏极致压缩冷藏,在 Steam 里照常点 Play 时自动唤醒,全程不干预 Steam 正常操作。
 
+> **压缩引擎实测要点(2026-06-07,真机)**:默认引擎是纯 7-Zip LZMA2。precomp 引擎(`.pc7z`)是**可选、默认关闭**的增强,只对 zlib/deflate 打包的游戏有用;对已压缩素材的游戏(Unity LZ4/LZMA bundle、UE5 Oodle、Forza 等)**反而更大更慢**——实测 Overcooked! 2(Unity)plain 5.4 GB/4 分钟,precomp 5.9 GB/10 分钟。故 precomp 必须 opt-in 逐游戏判断,绝不能默认开。两条引擎的 round-trip 均经真机验证字节完好(Steam 秒认不重下)。
+
 - 日期:2026-06-07
 - 平台:Windows 10 1809+ / Windows 11(NTFS)
 - 技术栈:C# / .NET 8 + Avalonia(GUI),Microsoft.Windows.ProjFS(虚拟化),外部压缩引擎(precomp / 7-Zip-LZMA2,srep 可选)
