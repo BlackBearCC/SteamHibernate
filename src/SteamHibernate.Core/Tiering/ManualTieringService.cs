@@ -31,7 +31,12 @@ public sealed class ManualTieringService
         if (!Directory.Exists(game.InstallDir))
             return TieringResult.Fail($"Game directory not found: {game.InstallDir} (appId={game.AppId})");
 
-        var pkgDir = Path.Combine(_archiveRoot, game.AppId);
+        // Default (empty archiveRoot): store the archive INSIDE the game's own Steam library
+        // (same drive as the game). Since the original folder is deleted after a verified compress,
+        // keeping the archive on the same drive nets a space saving rather than costing extra.
+        var pkgDir = string.IsNullOrWhiteSpace(_archiveRoot)
+            ? Path.Combine(game.Library.RootPath, "SteamHibernate", game.AppId)
+            : Path.Combine(_archiveRoot, game.AppId);
         PackageHeader header;
 
         // Phase 1 — build + verify the package. Any failure here is safe: the original game dir is never touched.

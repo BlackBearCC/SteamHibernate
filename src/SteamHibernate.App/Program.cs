@@ -40,10 +40,8 @@ class Program
 
         var configDir = Path.GetDirectoryName(cfgPath)!;
         var store = new MetadataStore(Path.Combine(configDir, "archives.json"));
-        var archiveRoot = string.IsNullOrWhiteSpace(cfg.ArchiveRoot)
-            ? Path.Combine(configDir, "archives")
-            : cfg.ArchiveRoot;
-        var tiering = new ManualTieringService(engine, store, archiveRoot, cfg.CompressionLevel, restoreEngines: restoreEngines);
+        // Empty ArchiveRoot => store archives inside each game's own Steam library (same drive).
+        var tiering = new ManualTieringService(engine, store, cfg.ArchiveRoot, cfg.CompressionLevel, restoreEngines: restoreEngines);
 
         int lastPct = -1;
         void Progress(ArchiveProgress p)
@@ -69,7 +67,8 @@ class Program
                 var appId = args[1];
                 var game = scanner.Scan().FirstOrDefault(g => g.AppId == appId);
                 if (game is null) { Console.Error.WriteLine($"Game {appId} is not installed."); return 2; }
-                Console.WriteLine($"Compressing {game.Name} ({game.SizeOnDisk / GB:F1} GB) -> {archiveRoot}");
+                var dest = string.IsNullOrWhiteSpace(cfg.ArchiveRoot) ? "<game library>/SteamHibernate" : cfg.ArchiveRoot;
+                Console.WriteLine($"Compressing {game.Name} ({game.SizeOnDisk / GB:F1} GB) -> {dest}");
                 lastPct = -1;
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 var res = tiering.Compress(game, Progress);

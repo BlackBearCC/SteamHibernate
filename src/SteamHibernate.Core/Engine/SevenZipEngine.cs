@@ -10,7 +10,14 @@ public sealed class SevenZipEngine : IArchiveEngine
 
     public static string? FindBinary()
     {
-        foreach (var name in new[] { "7zz", "7z", "7za", "7z.exe", "7za.exe" })
+        var names = new[] { "7zz", "7z", "7za", "7z.exe", "7za.exe" };
+        // Prefer a copy shipped next to the app (the installer bundles 7za.exe).
+        foreach (var name in names)
+        {
+            var local = Path.Combine(AppContext.BaseDirectory, name);
+            if (File.Exists(local)) return local;
+        }
+        foreach (var name in names)
         {
             var path = ResolveOnPath(name);
             if (path != null) return path;

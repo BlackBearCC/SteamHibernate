@@ -29,10 +29,8 @@ public partial class App : Application
             var (engine, restoreEngines) = SteamHibernate.Core.Engine.EngineFactory.Build(cfg);
             var store = new SteamHibernate.Core.Metadata.MetadataStore(
                 Path.Combine(Path.GetDirectoryName(SteamHibernate.Core.Config.ConfigStore.DefaultPath())!, "archives.json"));
-            var archiveRoot = string.IsNullOrWhiteSpace(cfg.ArchiveRoot)
-                ? Path.Combine(Path.GetDirectoryName(SteamHibernate.Core.Config.ConfigStore.DefaultPath())!, "archives")
-                : cfg.ArchiveRoot;
-            var tiering = new SteamHibernate.Core.Tiering.ManualTieringService(engine, store, archiveRoot, cfg.CompressionLevel, restoreEngines: restoreEngines);
+            // Empty ArchiveRoot => store archives inside each game's own Steam library (same drive).
+            var tiering = new SteamHibernate.Core.Tiering.ManualTieringService(engine, store, cfg.ArchiveRoot, cfg.CompressionLevel, restoreEngines: restoreEngines);
 
             var mainVm = new SteamHibernate.App.ViewModels.MainViewModel();
             mainVm.Wire(scanner, tiering, store);

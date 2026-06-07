@@ -26,7 +26,14 @@ public sealed class PrecompLzmaEngine : IArchiveEngine
 
     public static string? FindBinary()
     {
-        foreach (var name in new[] { "precomp", "precomp.exe" })
+        var names = new[] { "precomp", "precomp.exe" };
+        // Prefer a copy shipped next to the app (the installer bundles precomp.exe).
+        foreach (var name in names)
+        {
+            var local = Path.Combine(AppContext.BaseDirectory, name);
+            if (File.Exists(local)) return local;
+        }
+        foreach (var name in names)
         {
             var path = ResolveOnPath(name);
             if (path != null) return path;

@@ -39,6 +39,20 @@ public class ManualTieringServiceTests : IDisposable
     }
 
     [Fact]
+    public void Empty_archiveRoot_stores_package_inside_game_library()
+    {
+        var (_, game, store) = Setup();
+        // empty archive root => default to <library>/SteamHibernate/<appid>
+        var svc = new ManualTieringService(new FakeArchiveEngine(), store, "", level: 5);
+
+        Assert.True(svc.Compress(game, _ => { }).Success);
+
+        var expected = Path.Combine(game.Library.RootPath, "SteamHibernate", "999");
+        Assert.Equal(expected, store.Get("999")!.PackageDir);
+        Assert.True(Directory.Exists(expected));
+    }
+
+    [Fact]
     public void Compress_failed_verify_keeps_game_dir()
     {
         var (_, game, store) = Setup();
