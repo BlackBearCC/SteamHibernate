@@ -24,6 +24,7 @@ Steam 库占满系统盘,用户被迫"删游戏 → 重下新游戏"的循环往
 - G4:极致压缩,优先 ratio(可接受首次唤醒的解压等待)。
 - G5:**绝不丢游戏** —— 任何失败都不损坏原始可玩状态。
 - G6:压缩内核全开源、可插拔;srep 为可选增强。
+- G7:**手动模式为一等公民** —— GUI 支持玩家完全手动地压缩/解压,不依赖自动分层,也不强制 ProjFS。
 
 ### Non-Goals
 - 不做 Steam 之外的平台(Epic/GOG/独立程序)—— 本项目**专门针对 Steam**。
@@ -59,6 +60,20 @@ Steam 库占满系统盘,用户被迫"删游戏 → 重下新游戏"的循环往
 - **HYDRATING / DEHYDRATING**:过渡态,带进度,期间 UI 锁定该游戏的操作。
 
 状态记录在 MetadataStore;ProjFS 占位的"虚拟文件清单"来自归档时保存的目录快照(manifest)。
+
+### 两种运行模式(玩家可全局选,亦可按游戏覆盖)
+
+| | **Auto 模式(ProjFS 自动分层)** | **Manual 模式(纯手动归档/还原)** |
+|---|---|---|
+| Steam 显示 | 始终 Play(透明) | 冷藏后显示"未安装",还原后才 Play |
+| 唤醒触发 | 点 Play 自动 hydrate | 玩家在本工具里手动点 Restore |
+| 冷藏触发 | 闲置 N 天自动 / 也可手动 | 完全玩家手动点 Compress |
+| 依赖 ProjFS | 是 | **否**(ProjFS 不可用也能跑) |
+| 适合 | 想全自动、无感的玩家 | 反作弊游戏 / 不想要后台魔法 / 旧系统 |
+
+- 两种模式**共用同一套压缩内核(ArchiveEngine)与归档包格式(PackageFormat)** —— 区别只在"是否建立 ProjFS 占位 + 是否自动触发"。
+- Manual 模式下,Compress = 压缩+校验+删真实文件(Steam 转为未安装);Restore = 解包+把 appmanifest 与真实文件就位(Steam 秒认)。**不建占位、不挂 ProjFS。**
+- 即使全局选了 Auto,GUI 也始终提供对单个游戏的手动 Compress/Restore 操作。手动是底座,自动是其上的便利层。
 
 ---
 
@@ -171,12 +186,13 @@ BuildVirtualManifest(package) -> FileEntry[]  // 供 ProjFS 占位用(文件名/
 
 ## 12. GUI 设计(Avalonia,英文界面)
 
-- **主窗口 — 游戏列表**:每行 = 游戏名 / 占用大小 / 最后游玩 / 状态徽标(Installed · Hydrated · Dehydrated · 过渡态进度)。冷游戏(超阈值)标黄。
-- **行内操作**:Dehydrate / Hydrate 手动按钮;Dehydrated 行显示"已省 X GB"。
-- **进度浮层**:压缩/解压分阶段进度 + 实时压缩比。
-- **设置页**:归档目录(用户自定)、压缩等级、外部引擎路径、srep 开关、闲置阈值 N、自动冷藏开关、反作弊排除清单。
-- **首启向导**:检测/启用 ProjFS、定位 Steam、设归档目录、引擎自检。
-- 自动分层为核心;手动按钮为补充。
+- **主窗口 — 游戏列表**:每行 = 游戏名 / 占用大小 / 最后游玩 / 当前模式(Auto·Manual)/ 状态徽标(Installed · Hydrated · Dehydrated/Archived · 过渡态进度)。冷游戏(超阈值)标黄。
+- **行内手动操作(始终可用,G7)**:对任一游戏一键 **Compress / Restore**(Manual 语义)或 **Dehydrate / Hydrate**(Auto 语义);Dehydrated/Archived 行显示"已省 X GB"。多选批量压缩/还原。
+- **进度浮层**:压缩/解压分阶段进度 + 实时压缩比 + 可取消(取消即停在安全态)。
+- **设置页**:**默认模式(Auto / Manual)**、归档目录(用户自定)、压缩等级、外部引擎路径、srep 开关、闲置阈值 N、自动冷藏开关、反作弊排除清单。
+- **按游戏覆盖**:右键单个游戏可把它固定为 Auto 或 Manual,覆盖全局默认。
+- **首启向导**:选默认模式、(若选 Auto)检测/启用 ProjFS、定位 Steam、设归档目录、引擎自检。
+- 关系:**手动压缩/解压是底座,任何时候都能用;自动分层是其上的便利层**(需 ProjFS)。ProjFS 不可用时整个工具仍以 Manual 模式完整可用。
 
 ---
 
