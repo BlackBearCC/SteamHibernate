@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{3372E21A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteamHibernate.Core.Tests", "tests\SteamHibernate.Core.Tests\SteamHibernate.Core.Tests.csproj", "{8333CCCB-F0AB-492A-B55D-29925F41708A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteamHibernate.App.Tests", "tests\SteamHibernate.App.Tests\SteamHibernate.App.Tests.csproj", "{3C1830B3-F809-4DC0-9885-A8773157F306}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,10 +36,15 @@ Global
 		{8333CCCB-F0AB-492A-B55D-29925F41708A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8333CCCB-F0AB-492A-B55D-29925F41708A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8333CCCB-F0AB-492A-B55D-29925F41708A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C1830B3-F809-4DC0-9885-A8773157F306}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C1830B3-F809-4DC0-9885-A8773157F306}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C1830B3-F809-4DC0-9885-A8773157F306}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C1830B3-F809-4DC0-9885-A8773157F306}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{39B34CAC-92E2-4819-9877-F58C28A1627A} = {C7607BE2-F4FB-4FAA-AB32-18DC466619F7}
 		{9ACF1AAF-E4C3-48D1-AB62-348BF2AA061D} = {C7607BE2-F4FB-4FAA-AB32-18DC466619F7}
 		{8333CCCB-F0AB-492A-B55D-29925F41708A} = {3372E21A-AACE-4754-94A8-33378E9D76B8}
+		{3C1830B3-F809-4DC0-9885-A8773157F306} = {3372E21A-AACE-4754-94A8-33378E9D76B8}
 	EndGlobalSection
 EndGlobal
