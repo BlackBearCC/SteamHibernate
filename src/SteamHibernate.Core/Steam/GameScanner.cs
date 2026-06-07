@@ -1,4 +1,5 @@
 // src/SteamHibernate.Core/Steam/GameScanner.cs
+using System.IO;
 using SteamHibernate.Core.Vdf;
 
 namespace SteamHibernate.Core.Steam;
@@ -18,19 +19,26 @@ public sealed class GameScanner
             if (!Directory.Exists(lib.SteamAppsPath)) continue;
             foreach (var acf in Directory.GetFiles(lib.SteamAppsPath, "appmanifest_*.acf"))
             {
-                var state = VdfParser.Parse(File.ReadAllText(acf))["AppState"];
-                var appId = state["appid"].Value;
-                var installDir = state["installdir"].Value;
-                if (string.IsNullOrEmpty(appId) || string.IsNullOrEmpty(installDir)) continue;
+                try
+                {
+                    var state = VdfParser.Parse(File.ReadAllText(acf))["AppState"];
+                    var appId = state["appid"].Value;
+                    var installDir = state["installdir"].Value;
+                    if (string.IsNullOrEmpty(appId) || string.IsNullOrEmpty(installDir)) continue;
 
-                long.TryParse(state["SizeOnDisk"].Value, out var size);
-                games.Add(new InstalledGame(
-                    AppId: appId,
-                    Name: state["name"].Value ?? installDir,
-                    InstallDir: Path.Combine(lib.CommonPath, installDir),
-                    SizeOnDisk: size,
-                    LastPlayed: lastPlayed.TryGetValue(appId, out var lp) ? lp : null,
-                    Library: lib));
+                    long.TryParse(state["SizeOnDisk"].Value, out var size);
+                    games.Add(new InstalledGame(
+                        AppId: appId,
+                        Name: state["name"].Value ?? installDir,
+                        InstallDir: Path.Combine(lib.CommonPath, installDir),
+                        SizeOnDisk: size,
+                        LastPlayed: lastPlayed.TryGetValue(appId, out var lp) ? lp : null,
+                        Library: lib));
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    continue; // skip this one manifest, keep scanning
+                }
             }
         }
         return games;

@@ -33,4 +33,13 @@ public class VdfParserTests
         Assert.Null(root["A"]["zzz"].Value);
         Assert.True(root["A"]["zzz"].IsEmpty);
     }
+
+    [Fact]
+    public void Comment_lines_are_ignored()
+    {
+        var text = "\"A\" {\n    // a comment\n    \"k\" \"v\"\n}";
+        var root = VdfParser.Parse(text);
+        Assert.Equal("v", root["A"]["k"].Value);
+        Assert.True(root["A"]["//"].IsEmpty); // no spurious comment key
+    }
 }

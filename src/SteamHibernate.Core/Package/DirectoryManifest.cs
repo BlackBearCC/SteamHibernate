@@ -3,7 +3,7 @@ namespace SteamHibernate.Core.Package;
 
 public sealed class DirectoryManifest
 {
-    public required List<FileEntry> Files { get; init; }
+    public required IReadOnlyList<FileEntry> Files { get; init; }
     public long TotalSize => Files.Sum(f => f.Size);
 
     public static DirectoryManifest Capture(string root)

@@ -42,7 +42,16 @@ public static class VdfParser
 
     private static void SkipWhitespace(string s, ref int pos)
     {
-        while (pos < s.Length && char.IsWhiteSpace(s[pos])) pos++;
+        while (pos < s.Length)
+        {
+            if (char.IsWhiteSpace(s[pos])) { pos++; continue; }
+            if (pos + 1 < s.Length && s[pos] == '/' && s[pos + 1] == '/')
+            {
+                while (pos < s.Length && s[pos] != '\n') pos++;
+                continue;
+            }
+            break;
+        }
     }
 
     private static string ReadToken(string s, ref int pos)

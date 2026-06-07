@@ -21,4 +21,14 @@ public class GamePackageTests : IDisposable
         Assert.Equal(Path.Combine("bin", "a.txt"), entry.RelativePath);
         Assert.Equal(5, entry.Size);
     }
+
+    [Fact]
+    public void Manifest_of_empty_directory_is_empty()
+    {
+        var empty = Path.Combine(_tmp, "empty");
+        Directory.CreateDirectory(empty);
+        var m = DirectoryManifest.Capture(empty);
+        Assert.Empty(m.Files);
+        Assert.Equal(0, m.TotalSize);
+    }
 }

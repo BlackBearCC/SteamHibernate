@@ -46,5 +46,37 @@ public class GameScannerTests : IDisposable
         Assert.True(Directory.Exists(g.InstallDir));
     }
 
+    [Fact]
+    public void Scan_without_userdata_returns_game_with_null_lastplayed()
+    {
+        var root2 = Path.Combine(Path.GetTempPath(), "shtest2_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var apps = Path.Combine(root2, "steamapps");
+            Directory.CreateDirectory(Path.Combine(apps, "common", "Half-Life"));
+            File.WriteAllText(Path.Combine(apps, "appmanifest_70.acf"), """
+            "AppState"
+            {
+                "appid"      "70"
+                "name"       "Half-Life"
+                "installdir" "Half-Life"
+                "SizeOnDisk" "4194304"
+            }
+            """);
+            // deliberately NO userdata directory
+
+            var scanner = new GameScanner(new ConfigSteamLocator(root2));
+            var games = scanner.Scan();
+
+            var g = Assert.Single(games);
+            Assert.Equal("70", g.AppId);
+            Assert.Null(g.LastPlayed);
+        }
+        finally
+        {
+            if (Directory.Exists(root2)) Directory.Delete(root2, true);
+        }
+    }
+
     public void Dispose() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
 }
