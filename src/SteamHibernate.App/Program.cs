@@ -36,16 +36,14 @@ class Program
             : new ConfigSteamLocator(cfg.ArchiveRoot);
         var scanner = new GameScanner(locator);
 
-        var exe = cfg.SevenZipPath ?? SevenZipEngine.FindBinary()
-            ?? throw new InvalidOperationException("7-Zip not found; set SevenZipPath in config.");
-        var engine = new SevenZipEngine(exe);
+        var (engine, restoreEngines) = EngineFactory.Build(cfg);
 
         var configDir = Path.GetDirectoryName(cfgPath)!;
         var store = new MetadataStore(Path.Combine(configDir, "archives.json"));
         var archiveRoot = string.IsNullOrWhiteSpace(cfg.ArchiveRoot)
             ? Path.Combine(configDir, "archives")
             : cfg.ArchiveRoot;
-        var tiering = new ManualTieringService(engine, store, archiveRoot, cfg.CompressionLevel);
+        var tiering = new ManualTieringService(engine, store, archiveRoot, cfg.CompressionLevel, restoreEngines: restoreEngines);
 
         int lastPct = -1;
         void Progress(ArchiveProgress p)
