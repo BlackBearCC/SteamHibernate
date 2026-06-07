@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SteamHibernate.Core.Steam;
@@ -52,11 +53,13 @@ public partial class MainViewModel : ObservableObject
     public async Task CompressAsync(GameRowViewModel row)
     {
         if (_tiering is null || _scanner is null) return;
-        var game = _scanner.Scan().FirstOrDefault(g => g.AppId == row.AppId);
-        if (game is null) return;
         row.Busy = true; row.Status = "Compressing";
-        var result = await Task.Run(() => _tiering.Compress(game,
-            p => row.Progress = p.Fraction));
+        var result = await Task.Run(() =>
+        {
+            var game = _scanner.Scan().FirstOrDefault(g => g.AppId == row.AppId);
+            if (game is null) return TieringResult.Fail($"Game {row.AppId} not found during scan.");
+            return _tiering.Compress(game, p => Dispatcher.UIThread.Post(() => row.Progress = p.Fraction));
+        });
         row.Busy = false;
         row.Status = result.Success ? "Archived" : "Error";
         Refresh();
@@ -68,7 +71,7 @@ public partial class MainViewModel : ObservableObject
         if (_tiering is null) return;
         row.Busy = true; row.Status = "Restoring";
         var result = await Task.Run(() => _tiering.Restore(row.AppId,
-            p => row.Progress = p.Fraction));
+            p => Dispatcher.UIThread.Post(() => row.Progress = p.Fraction)));
         row.Busy = false;
         row.Status = result.Success ? "Installed" : "Error";
         Refresh();
