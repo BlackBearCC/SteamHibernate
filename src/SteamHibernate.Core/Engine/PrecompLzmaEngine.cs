@@ -5,6 +5,11 @@ namespace SteamHibernate.Core.Engine;
 /// IArchiveEngine that pipelines: STORE-7z → precomp → LZMA2-7z.
 /// The outer archive extension is ".pc7z", distinct from SevenZipEngine's ".7z",
 /// so packages created by this engine are self-identifying on restore.
+///
+/// Compress dry-run-restores the PCF before returning, so "Compress succeeds +
+/// VerifyIntegrity passes" implies the archive is restorable (the safety model relies on this).
+/// Peak temp usage is ~2x the source size (store container + pcf transiently).
+/// NOTE: precomp v0.4.7 is labelled a DEVELOPMENT build; the dry-run is the safety net for that.
 /// </summary>
 public sealed class PrecompLzmaEngine : IArchiveEngine
 {
@@ -73,6 +78,20 @@ public sealed class PrecompLzmaEngine : IArchiveEngine
                 throw new IOException($"precomp failed (exit {pcCode}).");
             if (!File.Exists(pcfPath))
                 throw new IOException("precomp did not produce output file.");
+
+            // The .pcf is self-contained — precomp -r reconstructs store.7z from it alone.
+            // Delete store.7z now to keep peak temp usage at ~2x source size (matters for big games).
+            File.Delete(storePath);
+
+            // Integrity gate: the system's safety model deletes the original game once Compress
+            // succeeds + VerifyIntegrity passes. VerifyIntegrity only checks the outer LZMA layer,
+            // which can't prove the PCF is restorable. So dry-run precomp restore HERE, before the
+            // original is ever touched. If precomp produced an unrestorable PCF, fail loudly now.
+            var verifyPath = Path.Combine(workDir, "verify.7z");
+            var dryRun = ExternalTool.Run(_precomp, new[] { "-r", $"-o{verifyPath}", pcfPath }, null);
+            if (dryRun != 0)
+                throw new IOException($"precomp produced an unrestorable PCF (restore dry-run exit {dryRun}).");
+            File.Delete(verifyPath);
             progress(new ArchiveProgress("Precompressing", 1));
 
             // Step 3 — LZMA2-compress the pcf into the final archive.
