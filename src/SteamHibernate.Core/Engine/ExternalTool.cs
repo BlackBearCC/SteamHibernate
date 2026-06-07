@@ -18,9 +18,10 @@ public static class ExternalTool
         foreach (var a in args) psi.ArgumentList.Add(a);
 
         using var p = new Process { StartInfo = psi };
-        p.OutputDataReceived += (_, e) => { if (e.Data != null) onLine?.Invoke(e.Data); };
-        p.ErrorDataReceived += (_, e) => { if (e.Data != null) onLine?.Invoke(e.Data); };
-        p.Start();
+        p.OutputDataReceived += (_, e) => { if (e.Data != null) { try { onLine?.Invoke(e.Data); } catch { /* progress is best-effort */ } } };
+        p.ErrorDataReceived += (_, e) => { if (e.Data != null) { try { onLine?.Invoke(e.Data); } catch { /* progress is best-effort */ } } };
+        if (!p.Start())
+            throw new InvalidOperationException($"Failed to start process: {exe}");
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
         p.WaitForExit();

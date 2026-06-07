@@ -1,4 +1,5 @@
 // src/SteamHibernate.Core/Package/GamePackage.cs
+using System.Linq;
 using System.Text.Json;
 using SteamHibernate.Core.Engine;
 
@@ -14,6 +15,7 @@ public static class GamePackage
         IArchiveEngine engine, string appId, string gameDir, string acfPath,
         string packageDir, int level, Action<ArchiveProgress> progress)
     {
+        // Note: on Compress failure a partial package dir may remain; the caller (tiering layer) is responsible for cleanup.
         Directory.CreateDirectory(packageDir);
 
         var manifest = DirectoryManifest.Capture(gameDir);
@@ -53,7 +55,7 @@ public static class GamePackage
 
         engine.Extract(dataPath, gameDir, progress);
 
-        var acfInPkg = Directory.GetFiles(packageDir, "appmanifest_*.acf").FirstOrDefault();
+        var acfInPkg = Directory.GetFiles(packageDir, "appmanifest_*.acf").SingleOrDefault();
         if (acfInPkg != null)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(acfPath)!);

@@ -38,6 +38,7 @@ public sealed class SevenZipEngine : IArchiveEngine
         var code = ExternalTool.Run(_exe, new[]
         {
             "a", "-t7z", $"-mx={level}", "-m0=lzma2", "-ms=on", "-bsp1", "-y",
+            // Path.Combine(srcDir, "*") => archive contents WITHOUT a top-level folder wrapper; 7z expands the glob itself (no shell).
             archivePath, Path.Combine(srcDir, "*")
         }, line => TryReportPercent(line, "Compressing", progress));
         if (code != 0) throw new IOException($"7z compress failed (exit {code}).");
@@ -50,6 +51,7 @@ public sealed class SevenZipEngine : IArchiveEngine
         progress(new ArchiveProgress("Extracting", 0));
         var code = ExternalTool.Run(_exe, new[]
         {
+            // 7z -o flag: output dir is concatenated directly to -o with no space (7z-specific).
             "x", "-bsp1", "-y", $"-o{dstDir}", archivePath
         }, line => TryReportPercent(line, "Extracting", progress));
         if (code != 0) throw new IOException($"7z extract failed (exit {code}).");

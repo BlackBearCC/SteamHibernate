@@ -60,5 +60,17 @@ public class GamePackageTests : IDisposable
 
         Assert.Equal("payload", File.ReadAllText(Path.Combine(restoreGame, "game.dat")));
         Assert.True(File.Exists(restoreAcf));
+        Assert.Equal(File.ReadAllText(acf), File.ReadAllText(restoreAcf));
+    }
+
+    [SkippableFact]
+    public void VerifyIntegrity_returns_false_on_corrupted_archive()
+    {
+        var exe = SevenZipEngine.FindBinary();
+        Skip.If(exe is null, "7-Zip binary not found");
+        var engine = new SevenZipEngine(exe!);
+        var archive = Path.Combine(_tmp, "bad.7z");
+        File.WriteAllBytes(archive, new byte[] { 0x00, 0x01, 0x02, 0x03 });
+        Assert.False(engine.VerifyIntegrity(archive));
     }
 }
