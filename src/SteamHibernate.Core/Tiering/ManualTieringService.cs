@@ -65,6 +65,11 @@ public sealed class ManualTieringService
         try
         {
             Directory.Delete(game.InstallDir, true);
+            // Remove the appmanifest too, so Steam shows the game as "not installed" rather than
+            // detecting missing files and trying to repair/redownload. A copy is in the package and
+            // Restore puts it back.
+            var acf = game.Library.AppManifestPath(game.AppId);
+            if (File.Exists(acf)) File.Delete(acf);
         }
         catch (Exception ex)
         {

@@ -34,6 +34,7 @@ public class ManualTieringServiceTests : IDisposable
 
         Assert.True(result.Success);
         Assert.False(Directory.Exists(game.InstallDir)); // original dir deleted
+        Assert.False(File.Exists(game.Library.AppManifestPath("999"))); // appmanifest removed -> Steam shows "not installed"
         Assert.NotNull(store.Get("999"));
     }
 
