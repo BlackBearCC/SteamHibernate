@@ -1,5 +1,6 @@
 using SteamHibernate.Core.Engine;
 
+// NOTE: text-based round-trip; not binary-safe. Fine for orchestration tests, do not use with binary fixtures.
 public sealed class FakeArchiveEngine : IArchiveEngine
 {
     public bool FailVerify { get; set; }

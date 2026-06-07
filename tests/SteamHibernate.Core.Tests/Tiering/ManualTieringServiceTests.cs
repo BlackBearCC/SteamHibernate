@@ -1,3 +1,5 @@
+using System.Linq;
+using SteamHibernate.Core.Engine;
 using SteamHibernate.Core.Metadata;
 using SteamHibernate.Core.Steam;
 using SteamHibernate.Core.Tiering;
@@ -61,5 +63,45 @@ public class ManualTieringServiceTests : IDisposable
         Assert.Equal("hello", File.ReadAllText(Path.Combine(game.InstallDir, "g.dat")));
         Assert.True(File.Exists(game.Library.AppManifestPath("999")));
         Assert.Null(store.Get("999"));
+    }
+
+    [Fact]
+    public void Compress_twice_replaces_package_without_duplicate_metadata()
+    {
+        var (svc, game, store) = Setup();
+        Assert.True(svc.Compress(game, _ => { }).Success);
+        // restore so the game dir exists again, then re-compress
+        Assert.True(svc.Restore("999", _ => { }).Success);
+        var (svc2, game2, store2) = (svc, game, store); // same instances
+        Assert.True(svc2.Compress(game2, _ => { }).Success);
+        Assert.Single(store2.All, r => r.AppId == "999");
+    }
+
+    [Fact]
+    public void Restore_failure_leaves_archive_and_record_intact()
+    {
+        // Reproduce Setup's library/game layout but keep a reference to the fake engine.
+        var root = Path.Combine(_root, "fail");
+        var lib = new SteamLibrary(Path.Combine(root, "lib"));
+        Directory.CreateDirectory(lib.CommonPath);
+        var gameDir = Path.Combine(lib.CommonPath, "MyGame");
+        Directory.CreateDirectory(gameDir);
+        File.WriteAllText(Path.Combine(gameDir, "g.dat"), "hello");
+        File.WriteAllText(lib.AppManifestPath("999"), "\"AppState\" { \"appid\" \"999\" }");
+        var game = new InstalledGame("999", "MyGame", gameDir, 5, null, lib);
+        var store = new MetadataStore(Path.Combine(root, "meta.json"));
+        var engine = new FakeArchiveEngine();
+        var svc = new ManualTieringService(engine, store, Path.Combine(root, "archives"), 5);
+
+        Assert.True(svc.Compress(game, _ => { }).Success);
+        var rec = store.Get("999");
+        Assert.NotNull(rec);
+
+        engine.FailVerify = true;                 // make the pre-extract integrity check fail
+        var result = svc.Restore("999", _ => { });
+
+        Assert.False(result.Success);
+        Assert.NotNull(store.Get("999"));         // record intact
+        Assert.True(Directory.Exists(rec!.PackageDir)); // archive intact
     }
 }

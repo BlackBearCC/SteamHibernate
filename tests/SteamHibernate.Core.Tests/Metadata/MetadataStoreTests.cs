@@ -12,7 +12,6 @@ public class MetadataStoreTests : IDisposable
         var store = new MetadataStore(_file);
         store.Upsert(new ArchiveRecord("70", "Half-Life", "/pkg/70",
             OriginalSize: 4_000_000, CompressedSize: 1_000_000, DateTimeOffset.UnixEpoch));
-        store.Save();
 
         var reloaded = new MetadataStore(_file);
         var rec = reloaded.Get("70");
