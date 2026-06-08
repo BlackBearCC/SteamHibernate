@@ -1,82 +1,115 @@
+<div align="center">
+
 # SteamHibernate
 
-A **Steam-only** desktop tool that **cold-archives games you're not playing** with maximum compression and restores them on demand — so your system drive stops filling up and you don't have to delete-and-redownload.
+**Cold-archive Steam games you're not playing — get the disk space back, restore in minutes instead of re-downloading.**
 
-> Status: **Plan 1 (Manual mode) is implemented and verified on real hardware.** Transparent auto-tiering (Plan 2, ProjFS) is on the roadmap. The project name is a working codename.
+[![Release](https://img.shields.io/github/v/release/BlackBearCC/SteamHibernate?include_prereleases&sort=semver)](https://github.com/BlackBearCC/SteamHibernate/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)](#requirements)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
+[![Status](https://img.shields.io/badge/status-alpha-orange)](#roadmap)
+
+</div>
 
 ---
 
+## The problem
+
+Your Steam drive fills up, so you delete a game to install a new one — then re-download 100 GB next time you want to play the old one. SteamHibernate breaks that loop: it compresses games you're not playing into a single archive and **removes the original**, then restores them on demand. Restoring from a local archive takes minutes; re-downloading takes hours.
+
+It is **Steam-aware**: it reads your libraries from the registry and `libraryfolders.vdf`, and on restore it puts the game files *and* the `appmanifest` back, so **Steam recognizes the game as installed again with no re-download and no integrity check**.
+
+> Status: **alpha.** Manual compress/restore works and is verified on real hardware (GUI + headless CLI). Transparent auto-restore-on-launch (ProjFS) is on the [roadmap](#roadmap).
+
+## Features
+
+- **Compress / Restore any installed Steam game** from a GUI list or the command line.
+- **Steam sees it correctly** — archived games show as *not installed*; restored games show as *Ready to Play* without a re-download.
+- **Stores archives inside the game's own Steam library by default** (same drive) — since the original is deleted, this nets a saving rather than costing extra space. Configurable.
+- **Never loses a game**: commit-on-success everywhere — the original is deleted only after the archive is built *and* verified.
+- **Live progress** with per-game progress bar and percentage.
+- **Pluggable compression engines**, fully open-source default stack.
+- **Self-contained installer** — bundles the .NET runtime, 7-Zip and precomp; no prerequisites.
+
 ## Install
 
-Download the latest **`SteamHibernate-Setup-x.y.z.exe`** from [Releases](https://github.com/BlackBearCC/SteamHibernate/releases) and run it. The installer is self-contained — it bundles the .NET runtime, `7za.exe`, and `precomp.exe`, so there are no prerequisites. It installs to Program Files with a Start Menu (and optional desktop) shortcut and an uninstaller.
+Download the latest **`SteamHibernate-Setup-x.y.z.exe`** from the [**Releases**](https://github.com/BlackBearCC/SteamHibernate/releases) page and run it. It installs to Program Files with a Start Menu (and optional desktop) shortcut and an uninstaller. Administrator rights are required (it moves files under your Steam folder).
 
-By default, archives are stored **inside each game's own Steam library** (`<library>\SteamHibernate\<appid>`, same drive as the game). Since a verified Compress deletes the original folder, keeping the archive on the same drive nets a space saving rather than costing extra. Override with `ArchiveRoot` in config if you'd rather archive to another drive/NAS.
+## Usage
 
-## What it does
+**GUI** — launch SteamHibernate. You get a list of your games (name, size, status) with per-row **Compress** and **Restore** buttons and a live progress bar.
 
-Steam installs games as plain folders under `steamapps/common/<Game>` plus an `appmanifest_<appid>.acf`. SteamHibernate:
+**Command line** (scriptable, no display needed):
 
-- **Scans** your Steam libraries (registry + `libraryfolders.vdf`), listing each game with size, last-played, and archive status.
-- **Compress**: packs a game into a single archive (game files **+ its appmanifest +** a directory manifest + metadata header), then removes the original folder and appmanifest so **Steam shows the game as "not installed"** (it won't try to repair/redownload).
-- **Restore**: extracts the archive back into place and restores the appmanifest, so **Steam instantly recognizes the game as installed — no redownload, no validation**. Restoring from a local archive is far faster than re-downloading 100 GB.
+```text
+SteamHibernate.App.exe list                 # list installed + archived games
+SteamHibernate.App.exe compress <appid>     # archive a game
+SteamHibernate.App.exe restore  <appid>     # bring it back
+```
 
-It talks to nothing external about your library; archives live wherever you point it (another drive, external SSD, NAS).
+> Tip: do compress/restore with **Steam closed**, or expect a one-time Steam Cloud "couldn't sync saves" prompt — changing game files under a running Steam confuses its save reconciliation. The files are fine; choose to proceed.
 
-## Why not just "compress everything"
+## How much space will I save?
 
-Modern game assets (textures, audio, video) ship **already compressed** (BC/DXT, Ogg, H.264, Unity LZ4/LZMA, UE Oodle). General-purpose compressors can't beat that entropy floor. Realistic savings:
+Honest answer: **it depends on the game, and it's not magic.** Modern game assets (textures, audio, video) ship *already compressed*, and no general-purpose compressor beats that entropy floor.
 
-| Game type | LZMA2 saving |
+| Game type | Typical saving |
 |---|---|
-| Modern AAA / Unity / Oodle (assets pre-compressed) | ~10–35% |
+| Modern AAA / Unity / Unreal-Oodle (assets pre-compressed) | ~10–35% |
 | Older / indie / loosely-packed (uncompressed or zip/deflate data) | ~40–60% |
 
-**The real win isn't shrinking a game to 10% — it's moving big games you're not playing off your system drive (100% reclaimed there), and getting them back in minutes instead of an hours-long redownload.**
+Measured example: *Overcooked! 2* (Unity) → **7.9 GB to 5.4 GB** (~32%).
+
+**The real win is moving big games off your drive entirely** (100% reclaimed there) and getting them back in minutes — not shrinking each game to a tenth.
 
 ## Compression engines
 
-- **Default: 7-Zip LZMA2 (solid).** Robust, fast, good ratio.
-- **Optional: precomp + LZMA2 (`.pc7z`), off by default.** `precomp` losslessly expands zlib/deflate streams so LZMA can recompress them, helping **deflate/zip-packed** games. ⚠️ It is **counterproductive on already-compressed games** (Unity/Oodle): measured on *Overcooked! 2* (Unity) — plain `5.4 GB / 4 min` vs precomp `5.9 GB / 10 min` (bigger **and** slower). Enable it per-game only when a game uses deflate packing.
+- **Default — 7-Zip LZMA2 (solid).** Robust, good ratio, fast.
+- **Optional — precomp + LZMA2 (`.pc7z`), off by default.** `precomp` losslessly expands zlib/deflate streams so LZMA can recompress them — it helps **deflate/zip-packed** games. It is **counterproductive on already-compressed games** (Unity/Oodle): measured on *Overcooked! 2*, precomp gave `5.9 GB / 10 min` vs plain `5.4 GB / 4 min` — bigger *and* slower. Enable it per game only when a game uses deflate packing.
 
-Engines are pluggable; archives are self-identifying (`.7z` vs `.pc7z`) so a package always restores with the engine that created it. The fully-open default stack is precomp (open source) + 7-Zip/xz; `srep` is intentionally **not** bundled (it is closed-source freeware).
+Archives are self-identifying (`.7z` vs `.pc7z`) and always restore with the engine that created them. The default stack (precomp + 7-Zip/xz) is fully open source; `srep` is deliberately **not** bundled (closed-source freeware).
 
 ## Safety — never lose a game
 
 Every state change is **commit-on-success**, never try-then-rollback:
 
-- **Compress**: pack → verify integrity (and, for the precomp engine, a restore dry-run) → **only then** delete the original folder + appmanifest. Any failure leaves the original untouched. Metadata is committed before the original is removed, so there is no window where both copies can be lost.
+- **Compress**: pack → verify integrity (precomp engine also dry-run-restores the data) → **only then** delete the original folder + appmanifest. Metadata is committed before the original is removed. Any failure leaves the original untouched.
 - **Restore**: extract to a temp dir on the same volume → atomic move into place → restore appmanifest → clear the record. Any failure leaves the archive intact.
 
 Corrupt config/metadata is surfaced, never silently reset.
 
-## Requirements
+## Architecture
 
-- Windows 10 1809+ / Windows 11, NTFS.
-- A 7-Zip executable (`7z`/`7za`). Point `SevenZipPath` at it, or have it on `PATH` / in `C:\Program Files\7-Zip`.
-- To run from source: .NET 8 SDK. To run a published build: nothing (publish self-contained).
-- (Optional) `precomp` for the `.pc7z` engine.
+A small, layered .NET 8 solution. All logic lives in a UI-free, cross-platform-testable core library; the GUI only displays and forwards commands.
 
-## Build & test
+```
+SteamHibernate.Core/
+  Vdf/        Valve KeyValues parser
+  Steam/      locate Steam + libraries, scan installed games & last-played
+  Engine/     IArchiveEngine + SevenZipEngine, PrecompLzmaEngine, EngineFactory
+  Package/    GamePackage (data + appmanifest + manifest + header)
+  Metadata/   JSON archive index (atomic writes)
+  Tiering/    ManualTieringService (commit-on-success compress/restore)
+  Config/     AppConfig + ConfigStore
+SteamHibernate.App/   Avalonia GUI + headless CLI
+tests/                xUnit (round-trips run against real 7-Zip/precomp)
+installer/            Inno Setup script
+```
+
+## Build from source
+
+Requirements: .NET 8 SDK. A 7-Zip executable on `PATH` enables the engine round-trip tests.
 
 ```bash
 dotnet build
-dotnet test                      # 7-Zip-dependent tests run if 7z is on PATH
-PRECOMP_PATH=/path/to/precomp dotnet test   # also runs the precomp round-trip test
+dotnet test                                   # 7-Zip tests run if 7z is available
+PRECOMP_PATH=/path/to/precomp dotnet test     # also runs the precomp round-trip test
 
-# Self-contained Windows build (no .NET install needed on the target):
+# Self-contained Windows build (no .NET needed on the target):
 dotnet publish src/SteamHibernate.App -c Release -r win-x64 --self-contained true -o out
-```
 
-## Usage
-
-**GUI** — run `SteamHibernate.App` with no arguments: a game list with per-row **Compress / Restore** buttons and progress.
-
-**Headless CLI** (scriptable, no display needed):
-
-```
-SteamHibernate.App.exe list                 # list installed + archived games
-SteamHibernate.App.exe compress <appid>     # archive a game
-SteamHibernate.App.exe restore  <appid>     # bring it back
+# Build the installer (Windows, Inno Setup): stage = publish output + 7za.exe + precomp.exe
+ISCC.exe /DStageDir=<stage> installer\SteamHibernate.iss
 ```
 
 ## Configuration
@@ -87,22 +120,29 @@ SteamHibernate.App.exe restore  <appid>     # bring it back
 |---|---|---|
 | `ArchiveRoot` | Where archives are stored (empty = inside each game's Steam library) | empty (per-library) |
 | `CompressionLevel` | LZMA2 level 1–9 | `9` |
-| `SevenZipPath` | Path to 7-Zip exe | auto-detect |
+| `SevenZipPath` | Path to the 7-Zip exe | auto-detect (incl. app folder) |
 | `EnablePrecomp` | Use the precomp engine | `false` |
-| `PrecompPath` | Path to precomp exe | auto-detect |
+| `PrecompPath` | Path to the precomp exe | auto-detect (incl. app folder) |
 | `IdleDays` | "Cold" threshold (for future auto-tiering) | `30` |
-| `DefaultMode` | `Manual` / `Auto` | `Manual` |
 
-## Notes & caveats
+## Caveats
 
-- **Do compress/restore with Steam closed**, or expect a one-time Steam Cloud "couldn't sync saves" prompt — changing game files under a running Steam confuses its cloud-save reconciliation. The game files are fine; just choose to proceed.
-- **Anti-cheat games** (EAC/BattlEye/Vanguard) are best left alone with archive/restore; planned auto-tiering will exclude them.
+- **Anti-cheat games** (EAC / BattlEye / Vanguard) are best left alone with archive/restore; planned auto-tiering will exclude them.
+- Restoring a game while Steam is running triggers a one-time Steam Cloud sync prompt (see [Usage](#usage)).
 
 ## Roadmap
 
-- **Plan 2 — Auto mode (ProjFS):** keep archived games appearing "installed" to Steam via a projected filesystem placeholder, auto-hydrate (extract) on first launch, auto-dehydrate when idle — so you never touch this tool, you just click Play. Gated on a spike validating that a ProjFS placeholder makes Steam show "Play" without triggering a redownload.
-- Settings UI, precomp auto-detection of deflate-friendly games, package reclamation after restore.
+- **Auto restore on launch (ProjFS).** The smooth experience: archived games keep showing **Play** in Steam via a projected-filesystem placeholder; clicking Play auto-restores (hydrates) the game, and idle games auto-archive. Compress can be manual or automatic; **restore is always automatic**. Gated on a spike proving a ProjFS placeholder makes Steam show Play without a re-download (the platform — Windows 11, ProjFS — is confirmed ready).
+- Settings UI, deflate auto-detection for the precomp engine, archive reclamation after restore.
+
+## Contributing
+
+Issues and pull requests are welcome. Run `dotnet test` before submitting; engine round-trips and the tiering safety tests should stay green. Screenshots of the GUI for this README are also welcome.
 
 ## License
 
-Not yet chosen — add a `LICENSE` file before distributing. The bundled compression stack (precomp, 7-Zip/xz) is open source; `srep` is deliberately not included.
+Not yet chosen — a `LICENSE` file will be added before wider distribution. The bundled compression tools (precomp, 7-Zip/xz) are open source; `srep` is intentionally not included.
+
+## Acknowledgements
+
+[7-Zip](https://www.7-zip.org/) · [precomp](https://github.com/schnaader/precomp-cpp) · [Avalonia](https://avaloniaui.net/) · [Inno Setup](https://jrsoftware.org/isinfo.php)
