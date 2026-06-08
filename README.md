@@ -9,6 +9,8 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 [![Status](https://img.shields.io/badge/status-alpha-orange)](#roadmap)
 
+<img src="docs/assets/screenshot.png" alt="SteamHibernate GUI — game list with per-row Compress / Restore actions" width="760">
+
 </div>
 
 ---
@@ -137,7 +139,7 @@ ISCC.exe /DStageDir=<stage> installer\SteamHibernate.iss
 
 ## Contributing
 
-Issues and pull requests are welcome. Run `dotnet test` before submitting; engine round-trips and the tiering safety tests should stay green. Screenshots of the GUI for this README are also welcome.
+Issues and pull requests are welcome. Run `dotnet test` before submitting; engine round-trips and the tiering safety tests should stay green.
 
 ## License
 
